@@ -1,3 +1,10 @@
+const http = require('http');
+// This creates a simple server to satisfy Render's port check
+http.createServer((req, res) => {
+  res.write("ALPHA-GEN is Online");
+  res.end();
+}).listen(process.env.PORT || 8080); 
+
 /**
  * ALPHA-GEN WhatsApp Bot
  * Built on Baileys
