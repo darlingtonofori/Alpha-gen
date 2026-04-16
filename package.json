@@ -1,19 +1,18 @@
 {
-  "name": "alpha-gen-demo",
+  "name": "alpha-gen-pairing",
   "version": "1.0.0",
-  "description": "ALPHA-GEN Demo - Test WhatsApp Bot",
-  "main": "index.js",
+  "description": "ALPHA-GEN - WhatsApp Bot with Web Pairing",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "web": "node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.5",
     "express": "^4.18.2",
     "qrcode": "^1.5.3",
-    "qrcode-terminal": "^0.12.0",
     "pino": "^8.17.2",
     "fs-extra": "^11.2.0",
-    "axios": "^1.6.2"
+    "axios": "^1.6.2",
+    "socket.io": "^4.6.1"
   }
 }
