@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALPHA-GEN | WhatsApp Bot Pairing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            max-width: 550px;
+            width: 100%;
+            padding: 50px;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h1 {
+            font-size: 36px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 30px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .input-group {
+            margin: 30px 0;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .phone-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .phone-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .code-display {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+            animation: slideDown 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .code-display.show {
+            display: block;
+        }
+
+        .pairing-code {
+            font-size: 48px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: #667eea;
+            font-family: monospace;
+            margin: 15px 0;
+        }
+
+        .instructions {
+            text-align: left;
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success {
+            color: #22c55e;
+            font-weight: bold;
+        }
+
+        .error {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .steps {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        .steps h4 {
+            color: #d97706;
+            margin-bottom: 10px;
+        }
+
+        .steps ol {
+            margin-left: 20px;
+        }
+
+        .steps li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🤖</div>
+        <h1>ALPHA-GEN</h1>
+        <div class="badge">✨ Instant Pairing ✨</div>
+
+        <div class="input-group">
+            <label>📱 WhatsApp Number (with country code)</label>
+            <input type="tel" id="phoneNumber" class="phone-input" placeholder="e.g., 919876543210" value="">
+            <small style="display: block; margin-top: 5px; color: #666;">Example: 919876543210 (India) or 1234567890 (US)</small>
+        </div>
+
+        <button id="pairBtn" onclick="requestPairing()">
+            🔗 Generate Pairing Code
+        </button>
+
+        <div id="codeDisplay" class="code-display">
+            <div style="font-size: 14px; color: #666;">✨ Your Pairing Code:</div>
+            <div id="pairingCode" class="pairing-code"></div>
+            <div class="instructions">
+                💡 <strong>How to use:</strong><br>
+                1. Open WhatsApp → Settings → Linked Devices<br>
+                2. Tap "Link a Device"<br>
+                3. Enter this 8-digit code<br>
+                4. Wait for connection!
+            </div>
+            <div id="statusMsg" style="margin-top: 10px; font-size: 14px;"></div>
+        </div>
+
+        <div class="steps">
+            <h4>📋 Quick Steps:</h4>
+            <ol>
+                <li>Enter your WhatsApp number with country code</li>
+                <li>Click "Generate Pairing Code"</li>
+                <li>Open WhatsApp → Linked Devices → Link a Device</li>
+                <li>Enter the 8-digit code shown above</li>
+                <li>✅ Done! Test with <strong>.ping</strong> command</li>
+            </ol>
+        </div>
+
+        <div class="footer">
+            ⚡ Test Commands: .ping | .menu | .time<br>
+            © 2024 ALPHA-GEN | Instant WhatsApp Bot
+        </div>
+    </div>
+
+    <script>
+        let currentSessionId = null;
+
+        async function requestPairing() {
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            
+            if (!phoneNumber) {
+                alert('Please enter your phone number');
+                return;
+            }
+            
+            const pairBtn = document.getElementById('pairBtn');
+            const codeDisplay = document.getElementById('codeDisplay');
+            const pairingCodeDiv = document.getElementById('pairingCode');
+            const statusMsg = document.getElementById('statusMsg');
+            
+            // Show loading
+            pairBtn.disabled = true;
+            pairBtn.innerHTML = '<span class="loading"></span> Generating Code...';
+            codeDisplay.classList.remove('show');
+            statusMsg.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/pair', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phoneNumber })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    currentSessionId = data.sessionId;
+                    pairingCodeDiv.textContent = data.pairingCode;
+                    statusMsg.innerHTML = '<span class="success">✅ Pairing code generated! Enter it in WhatsApp</span>';
+                    codeDisplay.classList.add('show');
+                    
+                    // Start checking connection status
+                    checkConnectionStatus(currentSessionId);
+                } else {
+                    statusMsg.innerHTML = `<span class="error">❌ Error: ${data.error || 'Failed to generate code'}</span>`;
+                    codeDisplay.classList.add('show');
+                }
+            } catch (error) {
+                statusMsg.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                codeDisplay.classList.add('show');
+            } finally {
+                pairBtn.disabled = false;
+                pairBtn.innerHTML = '🔗 Generate Pairing Code';
+            }
+        }
+        
+        async function checkConnectionStatus(sessionId) {
+            let attempts = 0;
+            const maxAttempts = 60; // 2 minutes
+            
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/status/${sessionId}`);
+                    const data = await response.json();
+                    
+                    const statusMsg = document.getElementById('statusMsg');
+                    
+                    if (data.status === 'connected') {
+                        statusMsg.innerHTML = '<span class="success">🎉 Connected! Try sending .ping to your bot!</span>';
+                        clearInterval(interval);
+                    } else if (data.status === 'error') {
+                        statusMsg.innerHTML = '<span class="error">❌ Connection failed. Please try again.</span>';
+                        clearInterval(interval);
+                    }
+                    
+                    attempts++;
+                    if (attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        if (data.status !== 'connected') {
+                            statusMsg.innerHTML = '<span class="error">⏰ Timeout. Please try again.</span>';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Status check error:', error);
+                }
+            }, 2000); // Check every 2 seconds
+        }
+        
+        // Auto-detect country code (optional)
+        function detectCountryCode() {
+            // You can implement IP-based detection if needed
+        }
+    </script>
+</body>
+</html>
