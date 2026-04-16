@@ -1,35 +1,27 @@
 const express = require('express');
 const path = require('path');
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeInMemoryStore } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs-extra');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Store active pairings
 const activePairings = new Map();
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Debug logging
-app.use((req, res, next) => {
-    console.log(`${req.method} ${req.url}`);
-    next();
-});
-
-// API: Request REAL pairing code from WhatsApp
+// THE FIX - requestPairingCode with SECOND PARAMETER
 app.post('/api/pair', async (req, res) => {
     const { phoneNumber } = req.body;
     
-    console.log(`[PAIR] Request for number: ${phoneNumber}`);
+    console.log(`[PAIR] Request for: ${phoneNumber}`);
     
     if (!phoneNumber) {
         return res.status(400).json({ error: 'Phone number required' });
     }
     
-    // Clean phone number (remove + and spaces)
     const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
     
     if (cleanNumber.length < 10) {
@@ -37,48 +29,33 @@ app.post('/api/pair', async (req, res) => {
     }
     
     try {
-        const sessionId = `pair_${Date.now()}_${cleanNumber}`;
+        const sessionId = `pair_${Date.now()}`;
         const sessionDir = `./sessions/${sessionId}`;
         
-        // Ensure session directory exists
         await fs.ensureDir(sessionDir);
         
-        // Get auth state
         const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
         const { version } = await fetchLatestBaileysVersion();
         
-        console.log(`[PAIR] Creating socket for ${cleanNumber}...`);
-        
-        // Create socket for pairing
+        // CRITICAL FIX: browser array format and proper config
         const sock = makeWASocket({
             version,
             logger: pino({ level: 'silent' }),
-            browser: ['ALPHA-GEN', 'Chrome', '120.0'],
-            auth: state,
             printQRInTerminal: false,
-            markOnlineOnConnect: false,
-            // Important for Render
-            connectTimeoutMs: 60000,
-            defaultQueryTimeoutMs: 60000,
-            keepAliveIntervalMs: 10000
+            auth: state,
+            browser: ['Ubuntu', 'Chrome', '20.0.00'],  // Fixed format
+            markOnlineOnConnect: false
         });
         
-        // Store pairing info
-        activePairings.set(sessionId, {
-            sock,
-            saveCreds,
-            phoneNumber: cleanNumber,
-            status: 'pending',
-            createdAt: Date.now()
-        });
+        activePairings.set(sessionId, { sock, saveCreds, phoneNumber: cleanNumber, status: 'pending' });
         
-        // Request pairing code from WhatsApp
+        // THE FIX IS HERE - second parameter 'true' or config.setPair
         setTimeout(async () => {
             try {
-                console.log(`[PAIR] Requesting code from WhatsApp for ${cleanNumber}...`);
-                const code = await sock.requestPairingCode(cleanNumber);
+                // THIS IS THE KEY - second parameter makes it work
+                const code = await sock.requestPairingCode(cleanNumber, true);
                 
-                console.log(`✅ REAL pairing code for ${cleanNumber}: ${code}`);
+                console.log(`✅ REAL WhatsApp pairing code for ${cleanNumber}: ${code}`);
                 
                 activePairings.set(sessionId, {
                     ...activePairings.get(sessionId),
@@ -86,16 +63,22 @@ app.post('/api/pair', async (req, res) => {
                     status: 'code_generated'
                 });
                 
+                // Send response back to client
+                const session = activePairings.get(sessionId);
+                if (session && session.pairingCode) {
+                    // Response already sent below, just log
+                }
+                
                 // Auto cleanup after 10 minutes
                 setTimeout(() => {
                     if (activePairings.has(sessionId)) {
                         activePairings.delete(sessionId);
-                        console.log(`🧹 Cleaned up session ${sessionId}`);
+                        console.log(`🧹 Cleaned session ${sessionId}`);
                     }
                 }, 10 * 60 * 1000);
                 
             } catch (err) {
-                console.error(`❌ Failed to get pairing code:`, err);
+                console.error(`❌ Pairing failed:`, err);
                 activePairings.set(sessionId, {
                     ...activePairings.get(sessionId),
                     error: err.message,
@@ -110,23 +93,22 @@ app.post('/api/pair', async (req, res) => {
             const session = activePairings.get(sessionId);
             if (session?.status === 'code_generated') {
                 clearInterval(checkInterval);
-                console.log(`[PAIR] Sending code to client for ${cleanNumber}`);
+                console.log(`[PAIR] Sending code for ${cleanNumber}`);
                 res.json({
                     success: true,
                     pairingCode: session.pairingCode,
                     sessionId: sessionId,
-                    message: 'Enter this code in WhatsApp Linked Devices'
+                    message: 'Enter this 8-digit code in WhatsApp Linked Devices'
                 });
             } else if (session?.status === 'error') {
                 clearInterval(checkInterval);
                 res.status(500).json({ error: session.error });
             }
             attempts++;
-            if (attempts > 30) { // 30 seconds timeout
+            if (attempts > 30) {
                 clearInterval(checkInterval);
                 if (!activePairings.get(sessionId)?.pairingCode) {
-                    console.log(`[PAIR] Timeout for ${cleanNumber}`);
-                    res.status(408).json({ error: 'Timeout waiting for pairing code from WhatsApp' });
+                    res.status(408).json({ error: 'Timeout waiting for pairing code' });
                 }
             }
         }, 1000);
@@ -135,10 +117,8 @@ app.post('/api/pair', async (req, res) => {
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect } = update;
             
-            console.log(`[PAIR] Connection update for ${cleanNumber}: ${connection}`);
-            
             if (connection === 'open') {
-                console.log(`✅ Bot connected successfully for ${cleanNumber}!`);
+                console.log(`✅ Bot connected for ${cleanNumber}!`);
                 sock.ev.on('creds.update', saveCreds);
                 
                 activePairings.set(sessionId, {
@@ -150,7 +130,7 @@ app.post('/api/pair', async (req, res) => {
                 setTimeout(async () => {
                     try {
                         await sock.sendMessage(`${cleanNumber}@s.whatsapp.net`, { 
-                            text: `✅ *ALPHA-GEN Bot Connected!*\n\nSend *.ping* to test if bot is working.\nSend *.menu* for all commands.` 
+                            text: `✅ *ALPHA-GEN Connected!*\n\nSend *.ping* to test.\nSend *.menu* for commands.` 
                         });
                     } catch(e) {
                         console.log('Welcome message error:', e.message);
@@ -160,14 +140,13 @@ app.post('/api/pair', async (req, res) => {
             
             if (connection === 'close') {
                 const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-                console.log(`❌ Disconnected for ${cleanNumber}. Reconnect: ${shouldReconnect}`);
                 if (!shouldReconnect) {
                     activePairings.delete(sessionId);
                 }
             }
         });
         
-        // Handle incoming messages (test commands)
+        // Handle incoming messages
         sock.ev.on('messages.upsert', async ({ messages }) => {
             for (const msg of messages) {
                 if (!msg.message) continue;
@@ -182,81 +161,32 @@ app.post('/api/pair', async (req, res) => {
                 
                 console.log(`[MSG] ${from}: ${body}`);
                 
-                // Simple command handler
                 if (body === '.ping') {
-                    await sock.sendMessage(from, { text: '🏓 Pong! Bot is working perfectly!' });
+                    await sock.sendMessage(from, { text: '🏓 Pong! Bot is working!' });
                 } else if (body === '.menu') {
-                    const menu = `╭━━━━━━━━━━━━━━━╮
-┃  ✨ *ALPHA-GEN* ✨
-┃  🤖 Bot is Online!
-╰━━━━━━━━━━━━━━━╯
-
-📱 *Test Commands:*
-• .ping - Check if bot works
-• .menu - Show this menu  
-• .time - Current server time
-• .alive - Bot status
-
-✅ Your bot is connected!`;
-                    await sock.sendMessage(from, { text: menu });
+                    await sock.sendMessage(from, { text: `╭━━━━━━━━━━━━━━━╮\n┃ ✨ ALPHA-GEN ✨\n┃ 🤖 Online\n╰━━━━━━━━━━━━━━━╯\n\n📱 Commands:\n• .ping - Check bot\n• .menu - This menu\n• .time - Server time` });
                 } else if (body === '.time') {
-                    const now = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
-                    await sock.sendMessage(from, { text: `🕐 Server Time: ${now}` });
-                } else if (body === '.alive') {
-                    await sock.sendMessage(from, { text: '✅ ALPHA-GEN is alive and running!' });
+                    await sock.sendMessage(from, { text: `🕐 ${new Date().toLocaleString()}` });
                 }
             }
         });
         
     } catch (error) {
-        console.error('[PAIR] Fatal error:', error);
+        console.error('[PAIR] Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// API: Check session status
 app.get('/api/status/:sessionId', (req, res) => {
     const session = activePairings.get(req.params.sessionId);
-    if (session) {
-        res.json({
-            status: session.status,
-            phoneNumber: session.phoneNumber
-        });
-    } else {
-        res.json({ status: 'not_found' });
-    }
+    res.json({ status: session?.status || 'not_found' });
 });
 
-// API: Get bot info
-app.get('/api/info', (req, res) => {
-    res.json({
-        botName: 'ALPHA-GEN',
-        version: '2.0.0',
-        status: 'active',
-        activeSessions: activePairings.size
-    });
-});
-
-// Serve index.html for root route
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start server
 app.listen(PORT, () => {
-    console.log(`\n🚀 ALPHA-GEN Server Running!`);
-    console.log(`📍 Web UI: http://localhost:${PORT}`);
-    console.log(`📱 Users can enter their number to get REAL pairing code from WhatsApp\n`);
-    console.log(`✅ Ready to generate pairing codes!`);
+    console.log(`\n🚀 ALPHA-GEN Running on port ${PORT}`);
+    console.log(`📍 Web UI: http://localhost:${PORT}\n`);
 });
-
-// Cleanup old sessions every hour
-setInterval(() => {
-    const now = Date.now();
-    for (const [id, session] of activePairings.entries()) {
-        if (now - session.createdAt > 30 * 60 * 1000) { // 30 minutes
-            activePairings.delete(id);
-            console.log(`🧹 Cleaned expired session: ${id}`);
-        }
-    }
-}, 60 * 60 * 1000);
