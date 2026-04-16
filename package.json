@@ -1,14 +1,14 @@
 {
-  "name": "alphagen-demo",
+  "name": "alpha-gen-demo",
   "version": "1.0.0",
+  "description": "WhatsApp Bot Demo",
   "main": "index.js",
-  "dependencies": {
-    "@whiskeysockets/baileys": "latest",
-    "express": "^4.18.2",
-    "pino": "^8.0.0",
-    "qrcode-terminal": "^0.12.0"
-  },
   "scripts": {
     "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.6.0",
+    "express": "^4.18.2",
+    "pino": "^8.16.1"
   }
 }
