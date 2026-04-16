@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        body { background: #0a0a0a; color: #00ff41; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        input { background: #1a1a1a; border: 1px solid #00ff41; color: #fff; padding: 10px; margin-bottom: 10px; }
+        button { background: #00ff41; color: #000; padding: 10px 20px; border: none; cursor: pointer; font-weight: bold; }
+        #code-display { font-size: 2rem; margin-top: 20px; letter-spacing: 5px; }
+    </style>
+</head>
+<body>
+    <h1>ALPHA-GEN PAIRING</h1>
+    <input type="text" id="number" placeholder="233500000000">
+    <button onclick="getCode()">GET PAIRING CODE</button>
+    <div id="code-display"></div>
+
+    <script>
+        async function getCode() {
+            const num = document.getElementById('number').value;
+            const display = document.getElementById('code-display');
+            display.innerText = "GENERATING...";
+            const res = await fetch(`/get-code?number=${num}`);
+            const data = await res.json();
+            display.innerText = data.code || "ERROR";
+        }
+    </script>
+</body>
+</html>
