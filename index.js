@@ -20,7 +20,7 @@ async function startAlphaGen(num, res) {
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
     
-    // Fetch latest version to match WhatsApp's current requirements
+    // Fetch latest version exactly like Knight Bot
     const { version } = await fetchLatestBaileysVersion();
 
     const sock = makeWASocket({
@@ -38,8 +38,8 @@ async function startAlphaGen(num, res) {
     });
 
     if (!sock.authState.creds.registered) {
-        // Essential delay for the socket to stabilize
-        await delay(5000); 
+        // Essential 6-second stabilization delay
+        await delay(6000); 
         try {
             const code = await sock.requestPairingCode(num);
             console.log(`✅ PUSH SENT. CODE: ${code}`);
