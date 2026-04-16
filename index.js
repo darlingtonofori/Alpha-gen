@@ -17,12 +17,14 @@ const PORT = process.env.PORT || 10000;
 app.use(express.static('public'));
 
 async function startAlphaGen(num, res) {
-    const sessionDir = `./sessions/${num}`;
+    const sessionDir = path.join(__dirname, 'sessions', num);
     
-    // Clear old failed session attempts
+    // CRITICAL: Wipe the specific folder to prevent "Couldn't link" corruption
     if (fs.existsSync(sessionDir)) {
         fs.rmSync(sessionDir, { recursive: true, force: true });
     }
+    // Ensure the main sessions folder exists
+    if (!fs.existsSync('./sessions')) fs.mkdirSync('./sessions');
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
     
@@ -33,23 +35,21 @@ async function startAlphaGen(num, res) {
         },
         printQRInTerminal: false,
         logger: pino({ level: "fatal" }),
-        // Using the GitHub-confirmed browser identity
-        browser: Browsers.ubuntu("Chrome"),
+        // This identity is verified for 2026 pairing
+        browser: Browsers.ubuntu("Chrome"), 
         markOnlineOnConnect: true,
     });
 
     if (!sock.authState.creds.registered) {
-        // Wait for socket stability before requesting the code
+        // Give the socket 3 seconds to stabilize before asking for the code
         await delay(3000); 
         try {
             const code = await sock.requestPairingCode(num);
-            console.log(`[ALPHA-GEN] Code for ${num}: ${code}`);
-            if (!res.headersSent) {
-                res.json({ code });
-            }
+            console.log(`✅ CODE FOR ${num}: ${code}`);
+            if (!res.headersSent) res.json({ code });
         } catch (err) {
             console.error("Pairing Error:", err);
-            if (!res.headersSent) res.status(500).json({ error: "Failed to generate code. Try again." });
+            if (!res.headersSent) res.status(500).json({ error: "Try again in 1 min" });
         }
     }
 
@@ -57,9 +57,7 @@ async function startAlphaGen(num, res) {
 
     sock.ev.on("connection.update", (update) => {
         const { connection, lastDisconnect } = update;
-        if (connection === "open") {
-            console.log(`✅ ALPHA-GEN LINKED: ${num}`);
-        }
+        if (connection === "open") console.log(`CONNECTED: ${num}`);
         if (connection === "close") {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
             if (shouldReconnect) startAlphaGen(num, res);
@@ -70,19 +68,16 @@ async function startAlphaGen(num, res) {
         const m = messages[0];
         if (!m.message || m.key.fromMe) return;
         const text = m.message.conversation || m.message.extendedTextMessage?.text || "";
-        
         if (text.toLowerCase() === ".ping") {
-            await sock.sendMessage(m.key.remoteJid, { 
-                text: "🚀 *ALPHA-GEN V1 TEST*\n\n*Status:* Online\n*Owner:* lebrondob" 
-            });
+            await sock.sendMessage(m.key.remoteJid, { text: "🚀 *ALPHA-GEN ONLINE*" });
         }
     });
 }
 
 app.get("/get-code", async (req, res) => {
     let num = req.query.number?.replace(/[^0-9]/g, "");
-    if (!num || num.length < 10) return res.status(400).json({ error: "Invalid Number Format" });
+    if (!num) return res.status(400).json({ error: "Invalid Number" });
     await startAlphaGen(num, res);
 });
 
-app.listen(PORT, () => console.log(`Server live on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server live on ${PORT}`));
