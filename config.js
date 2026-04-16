@@ -4,7 +4,7 @@
 
 module.exports = {
   // Owner
-  ownerNumber: ['YOUR_NUMBER_HERE'], // e.g. 2348012345678 (no + or spaces)
+  ownerNumber: ['233247504050'], // e.g. 2348012345678 (no + or spaces)
   ownerName: 'Alpha',
 
   // Bot Identity
