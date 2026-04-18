@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: alpha-gen-saas
+    env: node
+    buildCommand: npm install
+    startCommand: node index.js
+    disk:
+      name: alpha-gen-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
+    envVars:
+      - key: TG_TOKEN
+        sync: false
+      - key: ADMIN_ID
+        sync: false
+      - key: RENDER_EXTERNAL_URL
+        sync: false
