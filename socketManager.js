@@ -52,7 +52,7 @@ async function createSocket(telegramId, onConnect, onDisconnect) {
         },
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
-        browser: ['Ubuntu', 'Chrome', '20.0.04'],
+        browser: ['Ubuntu', 'Chrome', '120.0.0.0'],
         markOnlineOnConnect: false
     });
 
