@@ -15,7 +15,7 @@ const path = require('path');
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf-8'));
 
 // ─── Telegram Bot ──────────────────────────────────────────────
-const tgBot = new Telegraf(process.env.TG_TOKEN || 'YOUR_TELEGRAM_TOKEN_HERE');
+const tgBot = new Telegraf(process.env.TG_TOKEN || '8785161883:AAGAXg0C593wVcg2LUTu39VDN9kMq_mBvIk');
 
 // ─── State ─────────────────────────────────────────────────────
 let sock = null;
