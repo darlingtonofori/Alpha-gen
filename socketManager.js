@@ -172,7 +172,7 @@ async function pairUser(telegramId, phone, onCode, onSuccess, onFail) {
 
         // Wait for socket to open (60s timeout)
         await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('WhatsApp took too long to respond. Try again.')), 60000);
+            const timeout = setTimeout(() => reject(new Error('WhatsApp took too long to respond. Try again.')), 120000);
             sock.ev.on('connection.update', ({ connection }) => {
                 if (connection === 'open') { clearTimeout(timeout); resolve(); }
             });
